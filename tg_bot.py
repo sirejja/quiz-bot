@@ -1,22 +1,21 @@
-from email import message
 import logging
 import os
 import traceback
-from dotenv import load_dotenv
 from random import randint
-from telegram import Bot, KeyboardButton, Update, ReplyKeyboardMarkup
-from telegram.ext import (
-    CallbackContext, CommandHandler,
-    Filters, MessageHandler, Updater
-)
-from questions.questions_data_processing import get_questions_answers_from_files
+
+import redis
+from dotenv import load_dotenv
+from telegram import KeyboardButton, ReplyKeyboardMarkup, Update
+from telegram.ext import (CallbackContext, CommandHandler, Filters,
+                          MessageHandler, Updater)
+
+from questions.questions_data_processing import \
+    get_questions_answers_from_files
 
 
 # Enable logging
-logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-                    level=logging.INFO)
-
 logger = logging.getLogger(__name__)
+
 
 def build_menu(buttons,
                n_cols,
@@ -59,11 +58,19 @@ def buttons_handler(
     context: CallbackContext
 ):
     if 'Новый вопрос' in update.message.text:
+        question = get_questions_answers_from_files()[
+            randint(0, 15)
+        ]['question']
+
         context.bot.send_message(
             chat_id=update.effective_chat.id,
-            text=get_questions_answers_from_files()[randint(0,50)]['question']
+            text=question
         )
-
+        context.bot_data['redis_connection'].set(
+            update.effective_chat.id,
+            question
+        )
+        print(context.bot_data['redis_connection'].get(update.effective_chat.id))
 
 
 def help(
@@ -96,24 +103,34 @@ def error(
 
 
 def main():
+    logging.basicConfig(
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        level=logging.INFO
+    )
     load_dotenv()
-    # Create the EventHandler and pass it your bot's token.
+
+    redis_pool = redis.ConnectionPool(
+        host=os.environ['REDIS_HOST'],
+        port=os.environ['REDIS_PORT'],
+        password=os.environ['REDIS_PASSWORD']
+    )
+    redis_connection = redis.Redis(connection_pool=redis_pool)
+
     # bot = Bot(os.environ['TG_BOT_TOKEN'])
     updater = Updater(os.environ['TG_BOT_TOKEN'])
-
-    # Get the dispatcher to register handlers
     dp = updater.dispatcher
 
-    # on different commands - answer in Telegram
+    dp.bot_data['redis_connection'] = redis_connection
     dp.add_handler(CommandHandler("start", start))
     dp.add_handler(CommandHandler("help", help))
+
     dp.add_handler(
         MessageHandler(
             Filters.text & (~Filters.command),
             buttons_handler
         )
     )
-    # on noncommand i.e message - echo the message on Telegram
+
     dp.add_handler(
         MessageHandler(
             Filters.text & (~Filters.command),
@@ -127,9 +144,7 @@ def main():
     # Start the Bot
     updater.start_polling()
 
-    # Run the bot until you press Ctrl-C or the process receives SIGINT,
-    # SIGTERM or SIGABRT. This should be used most of the time, since
-    # start_polling() is non-blocking and will stop the bot gracefully.
+    # Run the bot until you press Ctrl-C or the process receives SIGINT
     updater.idle()
 
 
