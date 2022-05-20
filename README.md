@@ -52,9 +52,15 @@ python questions_data_processing.py
 
 Output file format:
 ```
-'question':
-'answer':
-'comment':
+{
+    'title_1':
+        {
+            'question': text,
+            'answer': text,
+            'comment': text
+        },
+    'title_2': {...},
+}
 ```
 
 
