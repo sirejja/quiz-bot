@@ -1,3 +1,4 @@
+import argparse
 import os
 import json
 import re
@@ -12,7 +13,7 @@ def match_data(data):
     return matches
 
 
-def get_questions_answers_from_files():
+def get_questions_answers_from_files(files_encoding='KOI8-R'):
     questions_filepath = os.path.dirname(
         os.path.abspath(__file__)
     ) + '/questions_data'
@@ -20,7 +21,9 @@ def get_questions_answers_from_files():
 
     for filename in os.listdir(questions_filepath):
         with open(
-            os.path.join(questions_filepath, filename), 'r', encoding='KOI8-R'
+            file=os.path.join(questions_filepath, filename),
+            mode='r',
+            encoding=files_encoding
         ) as file:
             text = file.read()
             title = text.split('\n')[1]
@@ -36,8 +39,19 @@ def get_questions_answers_from_files():
 
 
 def main():
-    questions = get_questions_answers_from_files()
-    with open('questions/questions.json', 'w', encoding='utf-8') as file:
+
+    parser = argparse.ArgumentParser(
+        description='Парсинг вопросов и ответов для квиза из файла'
+    )
+    parser.add_argument('-e', '--encoding', help='Кодировка файлов')
+    parser.add_argument('-d', '--destpath', help='Путь к разобранному файлу')
+    args = parser.parse_args()
+    destination_filepath = 'questions/questions.json' if not args.destpath \
+        else args.destpath
+    files_encoding = 'KOI8-R' if not args.encoding else args.encoding
+
+    questions = get_questions_answers_from_files(files_encoding=files_encoding)
+    with open(destination_filepath, 'w', encoding='utf-8') as file:
         json.dump(questions, file, ensure_ascii=False)
 
 

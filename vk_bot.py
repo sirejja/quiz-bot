@@ -1,18 +1,16 @@
 import logging
-import random
+import os
 
 import vk_api as vk
-from vk_api.longpoll import VkLongPoll, VkEventType
-from vk_api.keyboard import VkKeyboard, VkKeyboardColor
-import os
 from dotenv import load_dotenv
-
-
+from vk_api.keyboard import VkKeyboard, VkKeyboardColor
+from vk_api.longpoll import VkEventType, VkLongPoll
 from vk_api.utils import get_random_id
 
-from redis_controller import delete_user_cache, get_question_data, get_redis_connection, set_question_data
-from utils import check_answer, format_answer, get_random_question, load_data
-
+from redis_controller import (delete_user_cache, get_question_data,
+                              get_redis_connection, set_question_data)
+from setup_logger import setup_logger
+from questions_utils import check_answer, format_answer, get_random_question, load_data
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +19,7 @@ def send_message(chat_id, vk_api, message):
     keyboard = init_keyboard()
     vk_api.messages.send(
         peer_id=123456,
-        user_id=event.user_id,
+        user_id=chat_id,
         message=message,
         random_id=get_random_id(),
         keyboard=keyboard.get_keyboard(),
@@ -107,12 +105,11 @@ def send_score(event, vk_api):
 
 
 if __name__ == "__main__":
-    logging.basicConfig(
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-        level=logging.INFO
-    )
     load_dotenv()
-
+    
+    setup_logger(os.environ['TG_LOGS_TOKEN'], os.environ['TG_CHAT_ID'])
+    logger.info('Starting VK quiz bot')
+    
     global questions
     global redis_conn
 

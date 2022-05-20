@@ -6,10 +6,10 @@ from telegram import KeyboardButton, ReplyKeyboardMarkup, Update
 from telegram.ext import (CallbackContext, CommandHandler, ConversationHandler,
                           Filters, MessageHandler, Updater)
 
-from redis_controller import (delete_user_cache, get_question_data, 
+from redis_controller import (delete_user_cache, get_question_data,
                               get_redis_connection, set_question_data)
-from utils import check_answer, format_answer, get_random_question, load_data
-
+from setup_logger import setup_logger
+from questions_utils import check_answer, format_answer, get_random_question, load_data
 
 logger = logging.getLogger(__name__)
 CHOOSING, TYPING_REPLY = range(2)
@@ -64,7 +64,7 @@ def handle_new_question_request(
         chat_id=chat_id,
         text=question.get('question')
     )
-
+    print(question.get('answer'))
     set_question_data(redis_conn, chat_id, question)
     logger.info(f'{question},{chat_id}')
     return TYPING_REPLY
@@ -129,19 +129,10 @@ def send_score(
     return CHOOSING
 
 
-def error(
-    update: Update,
-    context: CallbackContext
-):
-    logger.info('Update "%s" caused error "%s"', update, context)
-
-
 def main():
-    logging.basicConfig(
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-        level=logging.INFO
-    )
     load_dotenv()
+    setup_logger(os.environ['TG_LOGS_TOKEN'], os.environ['TG_CHAT_ID'])
+    logger.info('Starting TG quiz bot')
 
     global questions
     global redis_conn
@@ -155,7 +146,7 @@ def main():
     )
 
     updater = Updater(os.environ['TG_BOT_TOKEN'])
-    dp = updater.dispatcher
+    dispatcher = updater.dispatcher
 
     conv_handler = ConversationHandler(
         entry_points=[
@@ -223,8 +214,7 @@ def main():
         ]  # type: ignore
     )
 
-    dp.add_handler(conv_handler)
-    dp.add_error_handler(error)
+    dispatcher.add_handler(conv_handler)
 
     # Start the Bot
     updater.start_polling()
