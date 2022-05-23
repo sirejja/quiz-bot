@@ -24,7 +24,7 @@ class LogBotHandler(logging.Handler):
 
 def setup_logger(tg_token_logs, chat_id):
 
-    logger = logging.getLogger()
+    logger = logging.getLogger(__name__)
 
     bot_handler = LogBotHandler(
         Bot(token=tg_token_logs),

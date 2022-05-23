@@ -10,8 +10,7 @@ def load_data(json_file):
 
 
 def get_random_question(data):
-    random_champ = random.choice(list(data.keys()))
-    random_question = random.choice(data[random_champ])
+    random_question = random.choice(data)
     return random_question
 
 
